@@ -6,6 +6,7 @@ import torchaudio
 from cosyvoice.cli.cosyvoice import CosyVoice2
 from cosyvoice.utils.file_utils import load_wav
 import concurrent.futures
+import re
 
 # 加载模型
 model_dir = 'pretrained_models/CosyVoice2-0.5B'  # 调整为您的模型目录
@@ -28,9 +29,13 @@ cosyvoice.add_zero_shot_spk(prompt_text, prompt_speech_16k, zero_shot_spk_id)
 cosyvoice.save_spkinfo()
 
 def generate_audio(tts_text, output_path):
+    import re
+    sentences = re.split(r'(?<=。|！|？|\.|!|\?)\s*', tts_text)  # 简单分割句子
     audio_segments = []
-    for i, j in enumerate(cosyvoice.inference_zero_shot(tts_text, '', '', zero_shot_spk_id=zero_shot_spk_id, stream=False)):
-        audio_segments.append(j['tts_speech'])
+    for sentence in sentences:
+        if sentence.strip():
+            for i, j in enumerate(cosyvoice.inference_zero_shot(sentence, '', '', zero_shot_spk_id=zero_shot_spk_id, stream=False)):
+                audio_segments.append(j['tts_speech'])
     if audio_segments:
         full_audio = torch.cat(audio_segments, dim=-1)
         torchaudio.save(output_path, full_audio, cosyvoice.sample_rate, format='mp3')
